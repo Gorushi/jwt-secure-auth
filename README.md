@@ -30,3 +30,10 @@ cp .env.example .env
 ```bash
 uvicorn app.main:app --reload
 ```
+
+## 기술 스택
+- Python 3.10+
+- FastAPI, Uvicorn
+- python-jose (JWT)
+- passlib (bcrypt)
+- SQLAlchemy (데이터 저장)
