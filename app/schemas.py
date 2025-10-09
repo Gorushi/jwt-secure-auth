@@ -1,25 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-class Signup(BaseModel):
-    username: str
+# User
+class UserBase(BaseModel):
+    email: EmailStr
+
+class UserCreate(UserBase):
     password: str
 
-# 토큰 응답 모델
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-
-# 토큰 페이로드(내용) 모델
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-# 사용자 정보 응답 모델
-class User(BaseModel):
+class User(UserBase):
     id: int
-    username: str
-    is_active: bool
 
     class Config:
         from_attributes = True
+
+# Token
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    refresh_token: Optional[str] = None

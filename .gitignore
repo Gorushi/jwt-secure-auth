@@ -27,3 +27,6 @@ Thumbs.db
 # Secrets & sensitive key files
 private_key.pem
 public_key.pem
+
+# 참고용 프로젝트 디렉토리 표시 파일
+tree.txt
