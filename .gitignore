@@ -30,3 +30,6 @@ public_key.pem
 
 # 참고용 프로젝트 디렉토리 표시 파일
 tree.txt
+
+# Local demonstration/test files
+vulnerable_page.html
