@@ -1,15 +1,17 @@
 from fastapi import FastAPI
-from .db import Base, engine
-from .routes import auth as auth_routes
-from .routes import users as users_routes
+from . import models
+from .db import engine
+from .routes import auth, users
 
-Base.metadata.create_all(bind=engine)
+# DB 테이블 생성
+models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="jwt-secure-auth - week2")
+app = FastAPI()
 
-app.include_router(auth_routes.router)
-app.include_router(users_routes.router)
+# 라우터 포함
+app.include_router(auth.router)
+app.include_router(users.router)
 
 @app.get("/")
-def root():
-    return {"msg": "jwt-secure-auth (week2) running"}
+def read_root():
+    return {"Hello": "World"}
