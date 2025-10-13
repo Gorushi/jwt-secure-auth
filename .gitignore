@@ -33,3 +33,6 @@ tree.txt
 
 # Local demonstration/test files
 vulnerable_page.html
+
+# RS256 key
+*.pem

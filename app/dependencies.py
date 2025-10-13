@@ -1,41 +1,34 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from . import models, auth, schemas
 from .db import SessionLocal
+from .config import settings 
 
-# --- Security Schemes ---
-
-# 사용자 이름/비밀번호 form으로 로그인을 처리하는 Swagger UI를 위함
-# tokenUrl은 실제 로그인(토큰 발급) 경로와 일치해야 함
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-# Authorization: Bearer <token> 헤더에서 직접 토큰을 추출하기 위함
-# (주로 Refresh Token을 전달받을 때 사용)
-bearer_scheme = HTTPBearer()
-
-
-# --- Database Dependency ---
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 def get_db():
-    """
-    각 API 요청에 대한 데이터베이스 세션을 생성, 요청 완료 후 세션을 닫음
-    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+# JTI가 블랙리스트에 있는지 확인하는 함수
+def is_jti_blacklisted(jti: str, db: Session) -> bool:
+    """JTI가 블랙리스트에 등록되었는지 확인."""
+    return db.query(models.TokenBlacklist).filter(models.TokenBlacklist.jti == jti).first() is not None
 
-# --- Authentication Dependencies ---
-
-def get_current_user_from_token(token: str, db: Session) -> models.User:
+def get_current_user(
+    token: str = Depends(oauth2_scheme), 
+    db: Session = Depends(get_db)
+) -> models.User:
     """
-    JWT 토큰을 디코딩, 검증하여 해당 사용자를 반환하는 핵심 함수.
-    Access Token과 Refresh Token 검증에 모두 재사용됩니다.
+    Access Token을 검증하고 현재 사용자를 반환하는 의존성.
+    - 토큰 디코딩 및 유효성 검사
+    - JTI 블랙리스트 확인
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -43,10 +36,24 @@ def get_current_user_from_token(token: str, db: Session) -> models.User:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        if settings.TOKEN_ALGORITHM == "RS256":
+            payload = jwt.decode(token, auth.PUBLIC_KEY, algorithms=[settings.TOKEN_ALGORITHM])
+        else:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.TOKEN_ALGORITHM])
+        
         email: str = payload.get("sub")
-        if email is None:
+        jti: str = payload.get("jti") # JTI 추출
+
+        if email is None or jti is None:
             raise credentials_exception
+        
+        # 블랙리스트 확인 로직 추가
+        if is_jti_blacklisted(jti, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Token has been revoked"
+            )
+
     except JWTError:
         raise credentials_exception
     
@@ -55,50 +62,13 @@ def get_current_user_from_token(token: str, db: Session) -> models.User:
         raise credentials_exception
     return user
 
-
-def get_current_user_from_access_token(
-    token: str = Depends(oauth2_scheme), 
-    db: Session = Depends(get_db)
-) -> models.User:
-    """
-    Access Token을 사용하여 현재 로그인된 사용자를 가져오는 의존성.
-    일반적으로 보호된 API 엔드포인트에서 사용됨
-    """
-    return get_current_user_from_token(token, db)
-
-
-def get_current_user_from_refresh_token(
-    token_credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: Session = Depends(get_db)
-) -> models.User:
-    """
-    Refresh Token을 사용하여 현재 사용자를 가져오는 의존성.
-    - 토큰 유효성 검증과 함께 DB에 저장된 토큰과 일치하는지 확인
-    - 주로 로그아웃, 토큰 재발급과 같은 작업에 사용됨
-    """
-    token = token_credentials.credentials
-    user = get_current_user_from_token(token, db)
-    
-    # DB에 저장된 Refresh Token과 일치하는지 확인
-    stored_token = db.query(models.RefreshToken).filter(
-        models.RefreshToken.user_id == user.id,
-        models.RefreshToken.token == token
-    ).first()
-
-    if not stored_token:
+# 쿠키에서 Refresh Token을 가져오는 의존성
+def get_refresh_token_from_cookie(request: Request) -> str:
+    """요청 쿠키에서 refresh_token을 추출."""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
+            detail="Refresh token not found in cookies"
         )
-    return user
-
-
-def get_new_access_token_from_refresh_token(
-    current_user: models.User = Depends(get_current_user_from_refresh_token)
-) -> str:
-    """
-    유효한 Refresh Token을 기반으로 새로운 Access Token을 생성하여 반환하는 의존성.
-    토큰 재발급 엔드포인트에서 사용됨
-    """
-    new_access_token = auth.create_access_token(data={"sub": current_user.email})
-    return new_access_token
+    return refresh_token
