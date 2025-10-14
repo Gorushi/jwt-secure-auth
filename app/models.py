@@ -1,19 +1,17 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
-from .db import Base # 수정: db.py에서 Base를 임포트
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from .db import Base
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    
-    refresh_token = relationship("RefreshToken", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
 
-class RefreshToken(Base):
-    __tablename__ = "refresh_tokens"
+# RefreshToken 모델을 제거하고, JTI 기반의 TokenBlacklist 모델을 추가.
+# JTI(JWT ID)를 저장하여 특정 토큰을 무효화하는 데 사용됨
+class TokenBlacklist(Base):
+    __tablename__ = "token_blacklist"
     id = Column(Integer, primary_key=True, index=True)
-    token = Column(String, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    
-    user = relationship("User", back_populates="refresh_token")
+    jti = Column(String, unique=True, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
