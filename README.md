@@ -147,21 +147,21 @@ uvicorn app.main:app --reload
 jwt-secure-auth/
 ├── app/
 │   ├── api/endpoints/
-│   │   └── auth.py          # MFA, Login, Refresh, Logout 핵심 로직
+│   │   └── auth.py                # MFA, Login, Refresh, Logout 핵심 로직
 │   ├── crud/
-│   │   └── crud_token.py    # Token Blacklist DB 작업
+│   │   └── crud_token.py          # Token Blacklist DB 작업
 │   ├── routes/
-│   │   └── users.py         # 사용자 정보 조회 (Protected Endpoint)
-│   ├── config.py            # 환경 설정 (Secret Key, Algorithm 등)
-│   ├── dependencies.py      # DB 세션 및 의존성 주입
-│   ├── main.py              # FastAPI 앱 진입점 & 라우터 등록
-│   ├── models.py            # SQLAlchemy DB 모델 (User, TokenBlacklist)
-│   ├── schemas.py           # Pydantic 데이터 검증 스키마
-│   └── security.py          # JWT 생성/검증, OTP 생성, 패스워드 해싱 유틸
-├── experiments/             # 검증용 스크립트
-│   ├── measure_performance.py
-│   └── measure_security.py
-├── keys/                    # 비대칭키(RS256) 저장 폴더
-├── requirements.txt         # 프로젝트 의존성 목록
-└── README.md                # 프로젝트 설명서
+│   │   └── users.py               # 사용자 정보 조회 (Protected Endpoint)
+│   ├── config.py                  # 환경 설정 (Secret Key, Algorithm 등)
+│   ├── dependencies.py            # DB 세션 및 의존성 주입
+│   ├── main.py                    # FastAPI 앱 진입점 & 라우터 등록
+│   ├── models.py                  # SQLAlchemy DB 모델 (User, TokenBlacklist)
+│   ├── schemas.py                 # Pydantic 데이터 검증 스키마
+│   └── security.py                # JWT 생성/검증, OTP 생성, 패스워드 해싱 유틸
+├── experiments/             
+│   ├── measure_performance.py     # 보안성 검증용 스크립트
+│   └── measure_security.py        # 성능 측정용 스크립트
+├── keys/                          # 비대칭키(RS256) 저장 폴더
+├── requirements.txt               # 프로젝트 의존성 목록
+└── README.md                      # 프로젝트 설명서
 ```
