@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from . import models
 from .db import engine
-from .routes import auth, users
+from .api.endpoints import auth
+# from .routes import auth
+from .routes import users 
 
 # 애플리케이션 시작 시 DB 테이블 생성
 models.Base.metadata.create_all(bind=engine)
@@ -13,9 +15,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 라우터 포함 
-app.include_router(auth.router)
-app.include_router(users.router)
+# 라우터 포함 (Prefix 설정 추가)
+# - 로그인: http://127.0.0.1:8000/api/auth/login
+# - MFA인증: http://127.0.0.1:8000/api/auth/mfa/verify
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+
+# - 사용자정보: http://127.0.0.1:8000/api/users/me
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 
 # 루트 경로
 @app.get("/", tags=["Root"])
